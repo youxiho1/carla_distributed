@@ -93,10 +93,15 @@ public:
   FPimpl(uint16_t RPCPort, uint16_t StreamingPort, uint16_t SecondaryPort)
     : Server(RPCPort),
       StreamingServer(StreamingPort),
-      SecondaryServer(SecondaryPort),
       BroadcastStream(StreamingServer.MakeStream())
   {
+    // we need to create shared_ptr from the router for some handlers
+    SecondaryServer = std::make_shared<carla::multigpu::Router>(SecondaryPort);
     BindActions();
+  }
+
+  std::shared_ptr<carla::multigpu::Router> GetSecondaryServer() {
+    return SecondaryServer;
   }
 
   /// Map of pairs < port , ip > with all the Traffic Managers active in the simulation
@@ -108,7 +113,7 @@ public:
 
   carla::streaming::Stream BroadcastStream;
   
-  carla::multigpu::Router SecondaryServer;
+  std::shared_ptr<carla::multigpu::Router> SecondaryServer;
 
   UCarlaEpisode *Episode = nullptr;
 
@@ -2182,7 +2187,7 @@ FDataMultiStream FCarlaServer::Start(uint16_t RPCPort, uint16_t StreamingPort, u
 {
   Pimpl = MakeUnique<FPimpl>(RPCPort, StreamingPort, SecondaryPort);
   StreamingPort = Pimpl->StreamingServer.GetLocalEndpoint().port();
-  // SecondaryPort = Pimpl->SecondaryServer.GetLocalEndpoint().port();
+  SecondaryPort = Pimpl->SecondaryServer->GetLocalEndpoint().port();
 
   UE_LOG(
       LogCarlaServer,
@@ -2236,7 +2241,7 @@ void FCarlaServer::AsyncRun(uint32 NumberOfWorkerThreads)
 
   Pimpl->Server.AsyncRun(RPCThreads);
   Pimpl->StreamingServer.AsyncRun(StreamingThreads);
-  Pimpl->SecondaryServer.AsyncRun(SecondaryThreads);
+  Pimpl->SecondaryServer->AsyncRun(SecondaryThreads);
 }
 
 void FCarlaServer::RunSome(uint32 Milliseconds)
@@ -2265,4 +2270,8 @@ FDataStream FCarlaServer::OpenStream() const
 {
   check(Pimpl != nullptr);
   return Pimpl->StreamingServer.MakeStream();
+}
+
+std::shared_ptr<carla::multigpu::Router> FCarlaServer::GetSecondaryServer() {
+  return Pimpl->GetSecondaryServer();
 }
