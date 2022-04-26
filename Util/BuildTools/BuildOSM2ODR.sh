@@ -88,9 +88,15 @@ if ${BUILD_OSM2ODR} ; then
 
   mkdir -p ${OSM2ODR_BUILD_FOLDER}
   cd ${OSM2ODR_BUILD_FOLDER}
-  # define clang compiler
-  export CC=/usr/bin/clang-8
-  export CXX=/usr/bin/clang++-8
+
+  CARLA_LLVM_VERSION_MAJOR=$(cut -d'.' -f1 <<<"$(clang -dumpversion)")
+  
+  if [[ -z "${CARLA_LLVM_VERSION_MAJOR}" ]]; then
+    fatal_error "Missing clang version variable."
+  fi
+  
+  export CC=/usr/bin/clang-$CARLA_LLVM_VERSION_MAJOR
+  export CXX=/usr/bin/clang++-$CARLA_LLVM_VERSION_MAJOR
 
   cmake ${OSM2ODR_SOURCE_FOLDER} \
       -G "Eclipse CDT4 - Ninja" \
