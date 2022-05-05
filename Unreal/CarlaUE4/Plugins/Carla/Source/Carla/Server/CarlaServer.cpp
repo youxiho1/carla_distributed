@@ -40,7 +40,7 @@
 #include <carla/rpc/EnvironmentObject.h>
 #include <carla/rpc/EpisodeInfo.h>
 #include <carla/rpc/EpisodeSettings.h>
-#include "carla/rpc/LabelledPoint.h"
+#include <carla/rpc/LabelledPoint.h>
 #include <carla/rpc/LightState.h>
 #include <carla/rpc/MapInfo.h>
 #include <carla/rpc/MapLayer.h>
@@ -61,7 +61,6 @@
 #include <carla/rpc/WalkerControl.h>
 #include <carla/rpc/VehicleWheels.h>
 #include <carla/rpc/WeatherParameters.h>
-#include <carla/streaming/Server.h>
 #include <carla/rpc/Texture.h>
 #include <carla/rpc/MaterialParameter.h>
 #include <compiler/enable-ue4-macros.h>
@@ -2362,4 +2361,10 @@ FDataStream FCarlaServer::OpenStream() const
 {
   check(Pimpl != nullptr);
   return Pimpl->StreamingServer.MakeStream();
+}
+
+carla::streaming::Server &FCarlaServer::GetStreamingServer() const
+{
+  check(Pimpl != nullptr);
+  return Pimpl->StreamingServer;
 }

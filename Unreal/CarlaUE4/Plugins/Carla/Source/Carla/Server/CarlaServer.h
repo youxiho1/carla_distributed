@@ -11,6 +11,10 @@
 
 #include "CoreMinimal.h"
 
+#include <compiler/disable-ue4-macros.h>
+#include <carla/streaming/Server.h>
+#include <compiler/enable-ue4-macros.h>
+
 class UCarlaEpisode;
 
 class FCarlaServer
@@ -36,6 +40,8 @@ public:
   void Stop();
 
   FDataStream OpenStream() const;
+
+  carla::streaming::Server &GetStreamingServer() const;
 
 private:
 

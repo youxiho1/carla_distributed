@@ -52,6 +52,10 @@ namespace streaming {
       return _server.MakeStream();
     }
 
+    void CloseStream(carla::streaming::detail::stream_id_type id) {
+      return _server.CloseStream(id);
+    }
+
     void Run() {
       _pool.Run();
     }

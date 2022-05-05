@@ -53,6 +53,20 @@ namespace detail {
     return MakeStreamState<MultiStreamState>(_cached_token, _stream_map);
   }
 
+  void Dispatcher::CloseStream(carla::streaming::detail::stream_id_type id) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    log_info("Calling CloseStream for ", id);
+    auto search = _stream_map.find(id);
+    if (search != _stream_map.end()) {
+      auto stream_state = search->second.lock();
+      if (stream_state != nullptr) {
+        log_info("Disconnecting all sessions (stream ", id, ")");
+        stream_state->ClearSessions();
+      }
+      _stream_map.erase(search);
+    }
+  }
+
   bool Dispatcher::RegisterSession(std::shared_ptr<Session> session) {
     DEBUG_ASSERT(session != nullptr);
     std::lock_guard<std::mutex> lock(_mutex);
@@ -62,6 +76,7 @@ namespace detail {
       if (stream_state != nullptr) {
         log_info("Connecting session (stream ", session->get_stream_id(), ")");
         stream_state->ConnectSession(std::move(session));
+        log_info("Current streams: ", _stream_map.size());
         return true;
       }
     }
@@ -73,12 +88,14 @@ namespace detail {
     DEBUG_ASSERT(session != nullptr);
     std::lock_guard<std::mutex> lock(_mutex);
     ClearExpiredStreams();
+    log_info("Calling DeregisterSession for ", session->get_stream_id());
     auto search = _stream_map.find(session->get_stream_id());
     if (search != _stream_map.end()) {
       auto stream_state = search->second.lock();
       if (stream_state != nullptr) {
         log_info("Disconnecting session (stream ", session->get_stream_id(), ")");
         stream_state->DisconnectSession(session);
+        log_info("Current streams: ", _stream_map.size());
       }
     }
   }
@@ -86,6 +103,7 @@ namespace detail {
   void Dispatcher::ClearExpiredStreams() {
     for (auto it = _stream_map.begin(); it != _stream_map.end(); ) {
       if (it->second.expired()) {
+        log_info("Removing expired session ", it->first);
         it = _stream_map.erase(it);
       } else {
         ++it;
