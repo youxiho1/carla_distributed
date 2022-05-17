@@ -341,3 +341,14 @@ void FCarlaEngine::ResetSimulationState()
 {
   bMapChanged = false;
 }
+
+void FCarlaEngine::SendSensorDone()
+{
+  if (!bIsPrimaryServer)
+  {
+    carla::multigpu::CommandHeader Header { carla::multigpu::MultiGPUCommand::SENSOR_DONE, 0 };
+    carla::Buffer buf((unsigned char *) &Header, (size_t) sizeof(Header));
+    Secondary->Write(std::move(buf));
+    carla::log_info("Sending sensor done from secondary");
+  }
+}

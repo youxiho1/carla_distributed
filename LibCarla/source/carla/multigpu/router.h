@@ -42,7 +42,7 @@ namespace multigpu {
     void Write(MultiGPUCommand id, Buffer &&buffer);
     std::future<SessionInfo> WriteToNext(MultiGPUCommand id, Buffer &&buffer);
 
-    void SetCallbacks();
+    void SetCallbacks(std::function<void(void)> on_sensor_done);
     void AsyncRun(size_t worker_threads);
 
     boost::asio::ip::tcp::endpoint GetLocalEndpoint() const;

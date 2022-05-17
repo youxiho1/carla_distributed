@@ -43,14 +43,18 @@ void ASceneCaptureCamera::BeginPlay()
       /// @todo Can we make sure the sensor is not going to be destroyed?
       if (!Sensor->IsPendingKill())
       {
-        auto Stream = Sensor->GetDataStream(*Sensor);
-        auto Buffer = Stream.PopBufferFromPool();
-        Buffer.copy_from(carla::sensor::s11n::ImageSerializer::header_offset, boost::asio::buffer(InBuffer.data(), InBuffer.size()));
-        if(Buffer.data())
-        {
-          SCOPE_CYCLE_COUNTER(STAT_CarlaSensorStreamSend);
-          TRACE_CPUPROFILER_EVENT_SCOPE_STR("Stream Send");
-          Stream.Send(*Sensor, std::move(Buffer));
+        // auto Stream = Sensor->GetDataStream(*Sensor);
+        // auto Buffer = Stream.PopBufferFromPool();
+        // Buffer.copy_from(carla::sensor::s11n::ImageSerializer::header_offset, boost::asio::buffer(InBuffer.data(), InBuffer.size()));
+        // if(Buffer.data())
+        // {
+        //   SCOPE_CYCLE_COUNTER(STAT_CarlaSensorStreamSend);
+        //   TRACE_CPUPROFILER_EVENT_SCOPE_STR("Stream Send");
+        //   Stream.Send(*Sensor, std::move(Buffer));
+        // }
+        UCarlaGameInstance* GameInstance = UCarlaStatics::GetGameInstance(Sensor->GetEpisode().GetWorld());
+        if (!GameInstance) {
+          GameInstance->GetCarlaEngine().SendSensorDone();
         }
       }
     });

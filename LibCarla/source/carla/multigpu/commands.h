@@ -15,6 +15,7 @@ enum MultiGPUCommand : uint32_t {
   SEND_FRAME = 0,
   LOAD_MAP,
   GET_TOKEN,
+  SENSOR_DONE,
   YOU_ALIVE
 };
 

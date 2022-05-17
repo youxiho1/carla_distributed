@@ -71,6 +71,8 @@ public:
     FCarlaEngine::FrameCounter = Value;
   }
 
+  void SendSensorDone();
+  
 private:
 
   void OnPreTick(UWorld *World, ELevelTick TickType, float DeltaSeconds);

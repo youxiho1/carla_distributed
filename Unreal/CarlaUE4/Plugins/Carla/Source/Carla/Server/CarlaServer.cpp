@@ -101,7 +101,15 @@ public:
   {
     // we need to create shared_ptr from the router for some handlers to live
     SecondaryServer = std::make_shared<carla::multigpu::Router>(SecondaryPort);
-    SecondaryServer->SetCallbacks();
+    SecondaryServer->SetCallbacks([this](){
+      ++SensorsDone;
+      carla::log_info("Sensors done: ", SensorsDone);
+      if (SensorsDone == 4) {
+        carla::log_info("All sensors done, ticking");
+        ResetSensorsDone();
+        TickCuesReceived.fetch_add(1, std::memory_order_release);
+      }
+    });
     BindActions();
   }
 
@@ -124,9 +132,13 @@ public:
 
   std::atomic_size_t TickCuesReceived { 0u };
 
+  void ResetSensorsDone() { SensorsDone = 0; }
+
 private:
 
   void BindActions();
+
+  uint32_t SensorsDone;
 };
 
 // =============================================================================

@@ -6,6 +6,7 @@
 
 #include "carla/multigpu/router.h"
 
+#include <carla/multigpu/commands.h>
 #include "carla/multigpu/listener.h"
 #include "carla/streaming/EndPoint.h"
 
@@ -28,7 +29,7 @@ Router::Router(uint16_t port) :
   _listener = std::make_shared<carla::multigpu::Listener>(_pool.io_context(), _endpoint);
 }
 
-void Router::SetCallbacks() {
+void Router::SetCallbacks(std::function<void(void)> on_sensor_done) {
   // prepare server
   std::weak_ptr<Router> weak = shared_from_this();
 
@@ -55,6 +56,14 @@ void Router::SetCallbacks() {
       self->_promises.erase(prom);
     } else {
       // log_info("Got data from secondary (without promise): ", buffer.size());
+      // get the header
+      CommandHeader *header;
+      header = reinterpret_cast<CommandHeader *>(buffer.data());
+      if (header->id == MultiGPUCommand::SENSOR_DONE) {
+        // call the callback
+        log_info("Calling on_sensor_done() ");
+        on_sensor_done();
+      }
     }
   };
 
