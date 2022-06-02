@@ -3,15 +3,16 @@
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
+# Revised By Linyu Li 2022.5.31
+
 """ This module contains PID controllers to perform lateral and longitudinal control. """
 
 from collections import deque
 import math
 import numpy as np
 import carla
-from agents.tools.misc import get_speed
 
-
+# 把vehicle这一参数去掉，改成一些其他参数的组合（replace by a combination of args)
 class VehiclePIDController():
     """
     VehiclePIDController is the combination of two PID controllers
@@ -20,12 +21,12 @@ class VehiclePIDController():
     """
 
 
-    def __init__(self, vehicle, args_lateral, args_longitudinal, offset=0, max_throttle=0.75, max_brake=0.3,
+    # 增加一个参数
+    def __init__(self, args_lateral, args_longitudinal, past_steering, offset=0, max_throttle=0.75, max_brake=0.3,
                  max_steering=0.8):
         """
         Constructor method.
 
-        :param vehicle: actor to apply to local planner logic onto
         :param args_lateral: dictionary of arguments to set the lateral PID controller
         using the following semantics:
             K_P -- Proportional term
@@ -44,26 +45,27 @@ class VehiclePIDController():
         self.max_brake = max_brake
         self.max_throt = max_throttle
         self.max_steer = max_steering
+        self.past_steering = past_steering
+        self._lon_controller = PIDLongitudinalController(**args_longitudinal)
+        self._lat_controller = PIDLateralController(offset, **args_lateral)
 
-        self._vehicle = vehicle
-        self._world = self._vehicle.get_world()
-        self.past_steering = self._vehicle.get_control().steer
-        self._lon_controller = PIDLongitudinalController(self._vehicle, **args_longitudinal)
-        self._lat_controller = PIDLateralController(self._vehicle, offset, **args_lateral)
-
-    def run_step(self, target_speed, waypoint):
+    # run_step这一函数要增加两个参数
+    def run_step(self, target_speed, current_speed, waypoint, transform):
         """
         Execute one step of control invoking both lateral and longitudinal
         PID controllers to reach a target waypoint
         at a given target_speed.
 
             :param target_speed: desired vehicle speed
+            :param current_speed
             :param waypoint: target location encoded as a waypoint
+            :param transform
             :return: distance (in meters) to the waypoint
         """
 
-        acceleration = self._lon_controller.run_step(target_speed)
-        current_steering = self._lat_controller.run_step(waypoint)
+
+        acceleration = self._lon_controller.run_step(target_speed, current_speed)
+        current_steering = self._lat_controller.run_step(waypoint, transform)
         control = carla.VehicleControl()
         if acceleration >= 0.0:
             control.throttle = min(acceleration, self.max_throt)
@@ -106,32 +108,28 @@ class PIDLongitudinalController():
     PIDLongitudinalController implements longitudinal control using a PID.
     """
 
-    def __init__(self, vehicle, K_P=1.0, K_I=0.0, K_D=0.0, dt=0.03):
+    def __init__(self, K_P=1.0, K_I=0.0, K_D=0.0, dt=0.03):
         """
         Constructor method.
-
-            :param vehicle: actor to apply to local planner logic onto
             :param K_P: Proportional term
             :param K_D: Differential term
             :param K_I: Integral term
             :param dt: time differential in seconds
         """
-        self._vehicle = vehicle
         self._k_p = K_P
         self._k_i = K_I
         self._k_d = K_D
         self._dt = dt
         self._error_buffer = deque(maxlen=10)
 
-    def run_step(self, target_speed, debug=False):
+    def run_step(self, target_speed, current_speed, debug=False):
         """
         Execute one step of longitudinal control to reach a given target speed.
-
+            :param current_speed
             :param target_speed: target speed in Km/h
             :param debug: boolean for debugging
             :return: throttle control
         """
-        current_speed = get_speed(self._vehicle)
 
         if debug:
             print('Current speed = {}'.format(current_speed))
@@ -172,11 +170,10 @@ class PIDLateralController():
     PIDLateralController implements lateral control using a PID.
     """
 
-    def __init__(self, vehicle, offset=0, K_P=1.0, K_I=0.0, K_D=0.0, dt=0.03):
+    def __init__(self, offset=0, K_P=1.0, K_I=0.0, K_D=0.0, dt=0.03):
         """
         Constructor method.
 
-            :param vehicle: actor to apply to local planner logic onto
             :param offset: distance to the center line. If might cause issues if the value
                 is large enough to make the vehicle invade other lanes.
             :param K_P: Proportional term
@@ -184,7 +181,6 @@ class PIDLateralController():
             :param K_I: Integral term
             :param dt: time differential in seconds
         """
-        self._vehicle = vehicle
         self._k_p = K_P
         self._k_i = K_I
         self._k_d = K_D
@@ -192,17 +188,17 @@ class PIDLateralController():
         self._offset = offset
         self._e_buffer = deque(maxlen=10)
 
-    def run_step(self, waypoint):
+    def run_step(self, waypoint, transform):
         """
         Execute one step of lateral control to steer
         the vehicle towards a certain waypoin.
-
             :param waypoint: target waypoint
+            :param transform:
             :return: steering control in the range [-1, 1] where:
             -1 maximum steering to left
             +1 maximum steering to right
         """
-        return self._pid_control(waypoint, self._vehicle.get_transform())
+        return self._pid_control(waypoint, transform)
 
     def _pid_control(self, waypoint, vehicle_transform):
         """

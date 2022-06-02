@@ -40,7 +40,7 @@ class LocalPlanner(object):
     unless a given global plan has already been specified.
     """
 
-    def __init__(self, vehicle, opt_dict={}):
+    def __init__(self, opt_dict={}):
         """
         :param vehicle: actor to apply to local planner logic onto
         :param opt_dict: dictionary of arguments with different parameters:
@@ -54,9 +54,9 @@ class LocalPlanner(object):
             max_steering: maximum steering applied to the vehicle
             offset: distance between the route waypoints and the center of the lane
         """
-        self._vehicle = vehicle
-        self._world = self._vehicle.get_world()
-        self._map = self._world.get_map()
+        # self._vehicle = vehicle
+        # self._world = self._vehicle.get_world()
+        # self._map = self._world.get_map()
 
         self._vehicle_controller = None
         self.target_waypoint = None
@@ -113,16 +113,25 @@ class LocalPlanner(object):
 
     def _init_controller(self):
         """Controller initialization"""
-        self._vehicle_controller = VehiclePIDController(self._vehicle,
-                                                        args_lateral=self._args_lateral_dict,
+        past_steering = self._vehicle.get_control().steer
+        self._vehicle_controller = VehiclePIDController(args_lateral=self._args_lateral_dict,
                                                         args_longitudinal=self._args_longitudinal_dict,
+                                                        past_steering=past_steering,
                                                         offset=self._offset,
                                                         max_throttle=self._max_throt,
                                                         max_brake=self._max_brake,
                                                         max_steering=self._max_steer)
 
         # Compute the current vehicle waypoint
+
+
+
+        #local planner需要map
         current_waypoint = self._map.get_waypoint(self._vehicle.get_location())
+
+
+
+
         self.target_waypoint, self.target_road_option = (current_waypoint, RoadOption.LANEFOLLOW)
         self._waypoints_queue.append((self.target_waypoint, self.target_road_option))
 
@@ -181,12 +190,12 @@ class LocalPlanner(object):
     def set_global_plan(self, current_plan, stop_waypoint_creation=True, clean_queue=True):
         """
         Adds a new plan to the local planner. A plan must be a list of [carla.Waypoint, RoadOption] pairs
-        The 'clean_queue` parameter erases the previous plan if True, otherwise, it adds it to the old one
-        The 'stop_waypoint_creation' flag stops the automatic creation of random waypoints
+        If 'clean_queue`, erases the previous plan, and if not, it is added to the old one
+        The 'stop_waypoint_creation' flag avoids creating more random waypoints
 
         :param current_plan: list of (carla.Waypoint, RoadOption)
         :param stop_waypoint_creation: bool
-        :param clean_queue: bool
+        :param ceal_queue: bool
         :return:
         """
         if clean_queue:
@@ -205,7 +214,9 @@ class LocalPlanner(object):
 
         self._stop_waypoint_creation = stop_waypoint_creation
 
-    def run_step(self, debug=False):
+
+
+    def run_step(self, veh_location, vehicle_speed, debug=False, speed_limit = 0, current_speed = 0, transform = None):
         """
         Execute one step of local planning which involves running the longitudinal and lateral PID controllers to
         follow the waypoints trajectory.
@@ -214,15 +225,13 @@ class LocalPlanner(object):
         :return: control to be applied
         """
         if self._follow_speed_limits:
-            self._target_speed = self._vehicle.get_speed_limit()
+            self._target_speed = speed_limit
 
         # Add more waypoints too few in the horizon
         if not self._stop_waypoint_creation and len(self._waypoints_queue) < self._min_waypoint_queue_length:
             self._compute_next_waypoints(k=self._min_waypoint_queue_length)
 
         # Purge the queue of obsolete waypoints
-        veh_location = self._vehicle.get_location()
-        vehicle_speed = get_speed(self._vehicle) / 3.6
         self._min_distance = self._base_min_distance + 0.5 *vehicle_speed
 
         num_waypoint_removed = 0
@@ -252,10 +261,11 @@ class LocalPlanner(object):
             control.manual_gear_shift = False
         else:
             self.target_waypoint, self.target_road_option = self._waypoints_queue[0]
-            control = self._vehicle_controller.run_step(self._target_speed, self.target_waypoint)
 
-        if debug:
-            draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], 1.0)
+            control = self._vehicle_controller.run_step(self._target_speed, current_speed, self.target_waypoint, transform)
+
+        #if debug:
+         #   draw_waypoints(self._vehicle.get_world(), [self.target_waypoint], 1.0)
 
         return control
 
@@ -274,10 +284,6 @@ class LocalPlanner(object):
                 return wpt, direction
             except IndexError as i:
                 return None, RoadOption.VOID
-
-    def get_plan(self):
-        """Returns the current plan of the local planner"""
-        return self._waypoints_queue
 
     def done(self):
         """
