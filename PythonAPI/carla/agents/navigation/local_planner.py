@@ -40,7 +40,7 @@ class LocalPlanner(object):
     unless a given global plan has already been specified.
     """
 
-    def __init__(self, opt_dict={}):
+    def __init__(self, past_steering, location, opt_dict={}):
         """
         :param vehicle: actor to apply to local planner logic onto
         :param opt_dict: dictionary of arguments with different parameters:
@@ -105,15 +105,15 @@ class LocalPlanner(object):
                 self._follow_speed_limits = opt_dict['follow_speed_limits']
 
         # initializing controller
-        self._init_controller()
+        self._init_controller(location, past_steering)
 
     def reset_vehicle(self):
         """Reset the ego-vehicle"""
         self._vehicle = None
 
-    def _init_controller(self):
+    def _init_controller(self, location, past_steering):
         """Controller initialization"""
-        past_steering = self._vehicle.get_control().steer
+
         self._vehicle_controller = VehiclePIDController(args_lateral=self._args_lateral_dict,
                                                         args_longitudinal=self._args_longitudinal_dict,
                                                         past_steering=past_steering,
@@ -127,7 +127,11 @@ class LocalPlanner(object):
 
 
         #local planner需要map
-        current_waypoint = self._map.get_waypoint(self._vehicle.get_location())
+        client = carla.Client('127.0.0.1', 2000)
+        client.set_timeout(4.0)
+        world = client.get_world()
+        self._map = world.get_map()
+        current_waypoint = self._map.get_waypoint(location)
 
 
 

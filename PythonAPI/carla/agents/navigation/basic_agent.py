@@ -68,7 +68,11 @@ class BasicAgent(object):
             self._max_steering = opt_dict['max_brake']
 
         # Initialize the planners
-        self._local_planner = LocalPlanner(opt_dict=opt_dict)
+
+        past_steering = self._vehicle.get_control().steer
+        location = self._vehicle.get_location()
+
+        self._local_planner = LocalPlanner(past_steering, location, opt_dict=opt_dict)
         self._global_planner = GlobalRoutePlanner(self._map, self._sampling_resolution)
 
     def add_emergency_stop(self, control):
