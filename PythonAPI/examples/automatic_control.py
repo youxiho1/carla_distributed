@@ -711,10 +711,12 @@ def game_loop(args):
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world)
+        past_steering = world.player.get_control().steer
+        location = world.player.get_location()
         if args.agent == "Basic":
-            agent = BasicAgent(world.player)
+            agent = BasicAgent(past_steering, location)
         else:
-            agent = BehaviorAgent(world.player, behavior=args.behavior)
+            agent = BehaviorAgent(past_steering, location, behavior=args.behavior)
 
         # Set the agent destination
         spawn_points = world.map.get_spawn_points()
@@ -745,7 +747,14 @@ def game_loop(args):
                     print("The target has been reached, stopping the simulation")
                     break
 
-            control = agent.run_step()
+            vehicle = world.player
+            veh_location = vehicle.get_location()
+            from WindowsNoEditor.PythonAPI.carla.agents.tools.misc import get_speed
+            vehicle_speed = get_speed(vehicle) / 3.6
+            current_speed = get_speed(vehicle)
+            speed_limit = vehicle.get_speed_limit()
+            transform = vehicle.get_transform()
+            control = agent.run_step(veh_location, vehicle_speed, current_speed, transform, speed_limit)
             control.manual_gear_shift = False
             world.player.apply_control(control)
 

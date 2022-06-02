@@ -3,6 +3,7 @@
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
+# Modified By Linyu Li 2022.6.2
 
 """ This module implements an agent that roams around a track following random
 waypoints and avoiding other vehicles. The agent also responds to traffic lights,
@@ -30,7 +31,7 @@ class BehaviorAgent(BasicAgent):
     are encoded in the agent, from cautious to a more aggressive ones.
     """
 
-    def __init__(self, vehicle, behavior='normal'):
+    def __init__(self, past_steering, location, behavior='normal'):
         """
         Constructor method.
 
@@ -39,12 +40,12 @@ class BehaviorAgent(BasicAgent):
             :param behavior: type of agent to apply
         """
 
-        super(BehaviorAgent, self).__init__(vehicle)
+        super(BehaviorAgent, self).__init__(past_steering, location, 70)
         self._look_ahead_steps = 0
 
         # Vehicle information
         self._speed = 0
-        self._speed_limit = 0
+        self._speed_limit = 70
         self._direction = None
         self._incoming_direction = None
         self._incoming_waypoint = None

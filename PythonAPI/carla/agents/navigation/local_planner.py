@@ -3,6 +3,7 @@
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
+# Modified By Linyu Li 2022.6.2
 """ This module contains a local planner to perform low-level waypoint following based on PID controllers. """
 
 from enum import Enum
@@ -40,7 +41,7 @@ class LocalPlanner(object):
     unless a given global plan has already been specified.
     """
 
-    def __init__(self, past_steering, location, opt_dict={}):
+    def __init__(self, map, past_steering, location, opt_dict={}):
         """
         :param vehicle: actor to apply to local planner logic onto
         :param opt_dict: dictionary of arguments with different parameters:
@@ -56,7 +57,7 @@ class LocalPlanner(object):
         """
         # self._vehicle = vehicle
         # self._world = self._vehicle.get_world()
-        # self._map = self._world.get_map()
+        self._map = map
 
         self._vehicle_controller = None
         self.target_waypoint = None
@@ -127,10 +128,7 @@ class LocalPlanner(object):
 
 
         #local planner需要map
-        client = carla.Client('127.0.0.1', 2000)
-        client.set_timeout(4.0)
-        world = client.get_world()
-        self._map = world.get_map()
+
         current_waypoint = self._map.get_waypoint(location)
 
 

@@ -3,6 +3,7 @@
 # This work is licensed under the terms of the MIT license.
 # For a copy, see <https://opensource.org/licenses/MIT>.
 
+# Revised by Linyu Li 2022.6.2
 """
 This module implements an agent that roams around a track following random
 waypoints and avoiding other vehicles. The agent also responds to traffic lights.
@@ -25,7 +26,7 @@ class BasicAgent(object):
     as well as to change its parameters in case a different driving mode is desired.
     """
 
-    def __init__(self, vehicle, target_speed=20, opt_dict={}):
+    def __init__(self, past_steering, location, target_speed=20, opt_dict={}):
     # def __init__(self, target_speed=20, opt_dict={}):
         """
         Initialization the agent paramters, the local and the global planner.
@@ -35,9 +36,12 @@ class BasicAgent(object):
             :param opt_dict: dictionary in case some of its parameters want to be changed.
                 This also applies to parameters related to the LocalPlanner.
         """
-        self._vehicle = vehicle
-        self._world = self._vehicle.get_world()
-        self._map = self._world.get_map()
+
+        #获取地图
+        client = carla.Client('127.0.0.1', 2000)
+        client.set_timeout(4.0)
+        world = client.get_world()
+        self._map = world.get_map()
         self._last_traffic_light = None
 
         # Base parameters
@@ -69,10 +73,9 @@ class BasicAgent(object):
 
         # Initialize the planners
 
-        past_steering = self._vehicle.get_control().steer
-        location = self._vehicle.get_location()
 
-        self._local_planner = LocalPlanner(past_steering, location, opt_dict=opt_dict)
+
+        self._local_planner = LocalPlanner(self._map, past_steering, location, opt_dict=opt_dict)
         self._global_planner = GlobalRoutePlanner(self._map, self._sampling_resolution)
 
     def add_emergency_stop(self, control):
