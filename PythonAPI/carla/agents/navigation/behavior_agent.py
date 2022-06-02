@@ -39,7 +39,8 @@ class BehaviorAgent(BasicAgent):
             :param ignore_traffic_light: boolean to ignore any traffic light
             :param behavior: type of agent to apply
         """
-
+        print(past_steering)
+        print(location)
         super(BehaviorAgent, self).__init__(past_steering, location, 70)
         self._look_ahead_steps = 0
 

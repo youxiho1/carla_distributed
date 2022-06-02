@@ -9,6 +9,7 @@ This module implements an agent that roams around a track following random
 waypoints and avoiding other vehicles. The agent also responds to traffic lights.
 It can also make use of the global route planner to follow a specifed route
 """
+import random
 
 import carla
 from enum import Enum
@@ -77,6 +78,10 @@ class BasicAgent(object):
 
         self._local_planner = LocalPlanner(self._map, past_steering, location, opt_dict=opt_dict)
         self._global_planner = GlobalRoutePlanner(self._map, self._sampling_resolution)
+
+        spawn_points = self._map.get_spawn_points()
+        destination = random.choice(spawn_points).location
+        self.set_destination(destination)
 
     def add_emergency_stop(self, control):
         """
